@@ -1,0 +1,32 @@
+@index
+M=0
+D=0
+(LOOP) 
+	@24576
+	D=M
+	@draw
+	D;JGT
+	@clear
+	D;JEQ
+(draw)
+	@index
+	D=M
+	@SCREEN
+	A=A+D
+	M=1
+	@index
+	M=M+1
+	@LOOP
+	0;JMP
+(clear)
+	@index
+	D=M
+	@LOOP
+	D;JEQ
+	@SCREEN
+	A=A+D
+	M=0
+	@index
+	M=M-1
+	@LOOP
+	0;JMP

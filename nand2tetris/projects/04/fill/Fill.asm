@@ -12,3 +12,36 @@
 // the screen should remain fully clear as long as no key is pressed.
 
 // Put your code here.
+
+@index
+M=0
+D=0
+(LOOP) 
+	@24576
+	D=M
+	@draw		//If a key is pressed, the program will draw a blackpoint.
+	D;JGT
+	@clear
+	D;JEQ
+(draw)
+	@index
+	D=M
+	@SCREEN
+	A=A+D       //Changing A will change memory[A]
+	M=1
+	@index
+	M=M+1
+	@LOOP
+	0;JMP
+(clear)
+	@index
+	D=M
+	@LOOP
+	D;JEQ
+	@SCREEN
+	A=A+D
+	M=0
+	@index
+	M=M-1
+	@LOOP
+	0;JMP
