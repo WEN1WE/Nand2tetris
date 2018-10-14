@@ -39,5 +39,37 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
+    // It's C-instruction and the destination of ALU is A.
+    And(a=instruction[15], b=instruction[5], out=ALUtoARegister);  
+    Mux16(a=instruction, b=ALUout, sel=ALUtoARegister, out=ARegisterInput);  
+    
+    // Load if it's A-instruction or it's C-instruction and the destination of ALU is A.
+    Not(in=instruction[15], out=Ainstruction);
+    Or(a=Ainstruction, b=ALUtoARegister, out=loadARegister);   
+    ARegister(in=ARegisterInput, load=loadARegister, out=ARegisterOut, out[0..14]=addrssM); 
+
+    // The input of ALU is from A or M.
+    Mux16(a=ARegisterOut, b=inM, sel=instruction[12], out=ALUinputY);  
+
+    // It's C-instruction and the destination of ALU is A.
+    And(a=instruction[15],b=instruction[4], out=loadDRegister);
+    DRegister(in=ALUout, load=loadDRegister, out=ALUinputX); 
+
+    ALU(x=ALUinputX, y=ALUinputY, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=ALUout, out=outM, zr=zero ,ng=negative); 
+
+    // wirte to M 
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+
+    And(a=zero, b=instruction[1], out=JEQ);
+    And(a=negative, b=instruction[2], out=JLT);
+    Or(a=zero, b=negative, out=zeroOrnegative);
+    Not(in=zeroOrnegative, out=positive);
+    And(a=positive, b=instruction[0], out=JGT);
+    Or(a=JEQ, b=JLT, out=JLE);
+    Or(a=JLE, b=JGT, out=jump);
+    And(a=instruction[15], b=jump, out=PCload);
+    Not(in=PCload, out=PCinc);
+    PC(in=ARegisterOut, load=PCload, inc=PCinc, reset=reset, out[0..14]=pc);
+
 }
