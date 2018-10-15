@@ -46,12 +46,14 @@ CHIP CPU {
     // Load if it's A-instruction or it's C-instruction and the destination of ALU is A.
     Not(in=instruction[15], out=Ainstruction);
     Or(a=Ainstruction, b=ALUtoARegister, out=loadARegister);   
-    ARegister(in=ARegisterInput, load=loadARegister, out=ARegisterOut, out[0..14]=addrssM); 
+    ARegister(in=ARegisterInput, load=loadARegister, out=ARegisterOut); 
+    And16(a=true, b=ARegisterOut, out[0..14]=addressM);
 
     // The input of ALU is from A or M.
     Mux16(a=ARegisterOut, b=inM, sel=instruction[12], out=ALUinputY);  
 
-    // It's C-instruction and the destination of ALU is A.
+
+    // It's C-instruction and the destination of ALU is D.
     And(a=instruction[15],b=instruction[4], out=loadDRegister);
     DRegister(in=ALUout, load=loadDRegister, out=ALUinputX); 
 
