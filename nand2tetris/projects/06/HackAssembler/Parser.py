@@ -1,23 +1,26 @@
-"""Encapsulates access to the input code."""
 class Parser:
-    # Opens the input file.
-    def __init__(self, filename):
-        self.commands = [line.strip('\n') for line in open(filename).readlines() if not line.startswith('//') and len(line) > 1]
+    """Encapsulates access to the input code."""
+
+    def __init__(self, file):
+        """Opens the input file."""
+        self.commands = [line.strip('\n') for line in open(file, 'r').readlines() if not line.startswith('//') and len(line) > 1]
         self.index = -1
         self.command = None
 
-    # Are there more commands in the input?
-    def hasMoreCommands(self):
-        return len(self.command) != self.index
+    def has_more_commands(self):
+        """Are there more commands in the input?"""
+        return len(self.commands) != self.index
 
-    # Reads the next command from the input and makes it the current command.
     def advance(self):
+        """Reads the next command from the input and makes it the current command."""
         self.index += 1
-        if self.hasMoreCommands():
-            self.command = self.command[self.index]
+        if self.has_more_commands():
+            self.command = self.commands[self.index]
+            return 1
+        return 0
 
-    # Returns the type of the current command.
-    def commandType(self):
+    def command_type(self):
+        """Returns the type of the current command."""
         if self.command.startswith('@'):
             return 'A_COMMAND'
         elif self.command.startswith('('):
@@ -25,29 +28,37 @@ class Parser:
         else:
             return 'C_COMMAND'
 
-    # Returns the symbol or decimal Xxx.
     def symbol(self):
-        if self.commandType() == 'A_COMMAND' or 'L_COMMAND':
+        """Returns the symbol or decimal Xxx."""
+        command_type = self.command_type()
+        if command_type == 'A_COMMAND' or command_type == 'L_COMMAND':
             return self.command.strip('()@')
+        else:
+            return None
 
-    # Returns the dest mnemonic in the current C-command.
     def dest(self):
-        if self.commandType() == 'C_COMMAND' and self.command.find('=') != -1:
+        """Returns the dest mnemonic in the current C-command."""
+        if self.command_type() == 'C_COMMAND' and self.command.find('=') != -1:
             return self.command[0:self.command.find('=')]
+        else:
+            return 'null'
 
-    # Returns the comp mnemonic in the current C-command.
     def comp(self):
-        if self.commandType() == 'C_COMMAND' and self.command.find('=') != -1:
+        """Returns the comp mnemonic in the current C-command."""
+        if self.command_type() == 'C_COMMAND' and self.command.find('=') != -1:
             return self.command[self.command.find('=')+1:]
 
-    # Return the jump mnemonic in the current C-command.
     def jump(self):
-        return self.command
+        """Return the jump mnemonic in the current C-command."""
+        if self.command.find(';') != -1:
+            return self.command[self.command.find(';')+1:]
+        else:
+            return 'null'
 
 
 
-a = 'abc=123'
-print(a[a.find('=')+1:])
+
+
 
 
 
