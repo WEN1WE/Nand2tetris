@@ -3,18 +3,25 @@ class Parser:
 
     def __init__(self, file):
         """Opens the input file."""
-        self.commands = [line.strip('\n') for line in open(file, 'r').readlines() if not line.startswith('//') and len(line) > 1]
+        self.commands = []
+        for line in open(file, 'r').readlines():
+            annotation = line.find('//')
+            if annotation != -1:
+                line = line[:annotation]
+            if len(line) > 1:
+                self.commands.append(line.strip().strip('\n'))
+
         self.index = -1
         self.command = None
 
     def has_more_commands(self):
         """Are there more commands in the input?"""
-        return len(self.commands) != self.index
+        return len(self.commands) > self.index + 1
 
     def advance(self):
         """Reads the next command from the input and makes it the current command."""
-        self.index += 1
         if self.has_more_commands():
+            self.index += 1
             self.command = self.commands[self.index]
             return 1
         return 0
@@ -45,8 +52,11 @@ class Parser:
 
     def comp(self):
         """Returns the comp mnemonic in the current C-command."""
-        if self.command_type() == 'C_COMMAND' and self.command.find('=') != -1:
-            return self.command[self.command.find('=')+1:]
+        if self.command_type() == 'C_COMMAND':
+            if self.command.find('=') != -1:
+                return self.command[self.command.find('=')+1:]
+            else:
+                return self.command[:self.command.find(';')]
 
     def jump(self):
         """Return the jump mnemonic in the current C-command."""
@@ -58,7 +68,8 @@ class Parser:
 
 
 
-
+#parser = Parser('/Users/wen/github/Nand2tetris/nand2tetris/projects/06/max/Max.asm')
+#print(parser.commands)
 
 
 
