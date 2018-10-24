@@ -10,7 +10,7 @@ class CodeWriter:
 
     def set_file_name(self, file_name):
         """Informs the code writer that the translation of a new VM file is started."""
-        print("Start translating file: " + file_name)
+        print("Start translating file:c " + file_name)
 
     def close_file(self):
         self.out_file.close()
@@ -56,6 +56,7 @@ class CodeWriter:
     def push(self, seg, index):
         if CodeWriter.is_const_seg(seg):
             self.val_to_stack(index)
+        self.inc_sp()
 
 # ***************** Gets segment type. ***************************************************
     @staticmethod
@@ -118,7 +119,7 @@ class CodeWriter:
 
     def val_to_stack(self, val):
         """ *SP = val """
-        self.a_command(val)                        # A = val
+        self.a_command(str(val))                   # A = val
         self.c_destination('D', 'A')               # D = A
         self.comp_to_stack('D')                    # *SP = D
 # *****************************************************************************************
