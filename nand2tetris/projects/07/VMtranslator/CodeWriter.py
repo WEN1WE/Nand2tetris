@@ -1,244 +1,188 @@
+from Parser import *
+import os
+
 class CodeWriter:
     """Translate VM commands into Hack assembly code."""
 
     def __init__(self, out_file_name):
         """Opens the output file."""
+        self.out_file = open(out_file_name, 'w')
 
-    def set_file_name(self):
+    def set_file_name(self, file_name):
         """Informs the code writer that the translation of a new VM file is started."""
+        print("Start translating file: " + file_name)
 
-    @staticmethod
-    def write_arithmetic(command):
-        """Writes the assembly code that is the translation of the given arithmetic command."""
-        if command == 'neg':
-            return unary_operator('-')
-        elif command == 'not':
-            return unary_operator('!')
-        elif command == 'add':
-            return binary_operator('+')
-        elif command == 'sub':
-            return binary_operator('-')
-        elif command == 'and':
-            return binary_operator('&')
-        elif command == 'or':
-            return binary_operator('|')
-        elif command == 'eq':
-            return compare('JEQ')
-        elif command == 'lt':
-            return compare('JLT')
-        elif command == 'gt':
-            return compare('JGT')
-
-    @staticmethod
-    def write_push_pop(command, segment, index):
-        """Write the assembly code that is the translation of the push or pop command."""
-        if command == 'C_PUSH':
-            return push(segment, index)
-
-
-
-    def close(self):
-        """Closes the output file."""
+    def close_file(self):
+        self.out_file.close()
 
     def wirte_init(self):
         """Write the assembly code that the VM initialization."""
+        self.a_command('256')                      # @256
+        self.c_destination('D', 'A')               # D=A
+        self.a_command('SP')                       # @SP
+        self.c_destination('M', 'D')               # SP=D=256
+ #       self.write_call('Sys.init', 0)
 
-    def write_label(self):
-        """Write the assembly code that is the translation of the label command."""
-
-    def wirte_goto(self):
-        """Write the assembly code that is the translation of the goto command."""
-
-    def write_if(self):
-        """Write the assembly code that is the translation of the if command."""
-
-    def write_call(self):
+    def write_call(self, function_name, num_args):
         """Write the assembly code that is the translation of the call command."""
 
-    def write_return(self):
-        """Write the assembly code that is the translation of the return command."""
+    def write_arithmetic(self, command):
+        """Writes the assembly code that is the translation of the given arithmetic command."""
+        if command == 'neg':
+            self.unary_operator('-')
+        elif command == 'not':
+            self.unary_operator('!')
+        elif command == 'add':
+            self.binary_operator('+')
+        elif command == 'sub':
+            self.binary_operator('-')
+        elif command == 'and':
+            self.binary_operator('&')
+        elif command == 'or':
+            self.binary_operator('|')
+        elif command == 'eq':
+            self.compare('JEQ')
+        elif command == 'lt':
+            self.compare('JLT')
+        elif command == 'gt':
+            self.compare('JGT')
 
-    def write_function(self):
-        """Write the assembly code that is the translation of the function command."""
+    def write_push_pop(self, command, seg, index):
+        if command == C_PUSH:
+            self.push(seg, index)
+  #      elif command == C_POP:
+   #         self.pop(seg, index)
 
-# Generator A or C or L commands.
-def a_command(value):
-    """Returns @value."""
-    return '@' + value + '\n'
+    def push(self, seg, index):
+        if CodeWriter.is_const_seg(seg):
+            self.val_to_stack(index)
 
+# ***************** Gets segment type. ***************************************************
+    @staticmethod
+    def is_mem_seg(seg):
+        return seg in [S_LCL, S_ARG, S_THIS, S_THAT]
 
-def c_command(dest, comp, jump):
-    """Returns dest=comp;jump."""
-    if dest:
-        return dest + '=' + comp + '\n'
-    elif jump:
-        return comp + ';' + jump + '\n'
-    else:
-        return comp + '\n'
+    @staticmethod
+    def is_reg_seg(seg):
+        return seg in [S_REG, S_PTR, S_TEMP]
 
+    @staticmethod
+    def is_static_seg(seg):
+        return seg == S_STATIC
 
-def c_destination(dest, comp):
-    """Returns dest=comp."""
-    return c_command(dest, comp, None)
-
-
-def c_jump(comp, jump):
-    """Returns comp;jump."""
-    return c_command(None, comp, jump)
-
-
-def l_command(label):
-    """Returns (label)."""
-    return '(' + label + ')\n'
-
-# Methods to operate SP
-def inc_sp():
-    """ SP += 1 """
-    return a_command('SP') + c_destination('M', 'M+1')
-
-
-def dec_sp():
-    """ SP -= 1 """
-    return a_command('SP') + c_destination('M', 'M-1')
-
-
-def load_sp():
-    """ A = SP """
-    return a_command('SP') + c_destination('A', 'M')
-
-# Methods to operate stack
-def stack_to_dest(dest):
-    """ dest = *SP """
-    return load_sp() + c_destination(dest, 'M')
+    @staticmethod
+    def is_const_seg(seg):
+        return seg == S_CONST
+# *****************************************************************************************
 
 
-def comp_to_stack(comp):
-    """ *SP = comp """
-    return load_sp() + c_destination('M', comp)
+# ***************** Arithmetic and logic operations. **************************************
+    def unary_operator(self, operator):
+        self.dec_sp()                              # SP -= 1
+        self.stack_to_dest('D')                    # D = *SP
+        self.c_destination('D', operator+'D')      # D = operator + D
+        self.comp_to_stack('D')                    # *SP = D
+        self.inc_sp()                              # SP += 1
+
+    def binary_operator(self, operator):
+        self.dec_sp()                              # SP -= 1
+        self.stack_to_dest('D')                    # D = *SP
+        self.dec_sp()                              # SP -= 1
+        self.stack_to_dest('A')                    # A = *SP
+        self.c_destination('D', 'A'+operator+'D')  # D = A operator D
+        self.comp_to_stack('D')                    # *SP = D
+        self.inc_sp()                              # SP += 1
+
+    def compare(self, operator):
+        self.dec_sp()                              # SP -= 1
+        self.stack_to_dest('D')                    # D = *SP
+        self.dec_sp()                              # SP -= 1
+        self.stack_to_dest('A')                    # A = *SP
+        self.c_destination('D', 'A-D')             # D = A-D
+        self.a_command('jump')                     # @jump
+        self.c_jump('D', operator)                 # D;operator
+        self.a_command('end')                      # @end
+        self.comp_to_stack('0')                    # *SP = 0
+        self.l_command('jump')                     # (jump)
+        self.comp_to_stack('-1')                   # *SP = -1
+        self.l_command('end')                      # (end)
+        self.inc_sp()                              # SP += 1
+# *****************************************************************************************
 
 
-def val_to_stack(val):
-    """ A = val
-        D = A
-        *SP = D
-    """
-    return (a_command(val)
-            + c_destination('D', 'A')
-            + comp_to_stack('D'))
+# ***************** Methods to store values into the stack. *******************************
+    def comp_to_stack(self, comp):
+        """ *SP = comp """
+        self.load_sp()                             # A = SP
+        self.c_destination('M', comp)              # *SP = comp
+
+    def val_to_stack(self, val):
+        """ *SP = val """
+        self.a_command(val)                        # A = val
+        self.c_destination('D', 'A')               # D = A
+        self.comp_to_stack('D')                    # *SP = D
+# *****************************************************************************************
 
 
-def load_segment(segment, index):
-    a_command(index)                # A = index
-    c_destination('D', 'A')         # D = A
-    a_command(segment)
-    c_destination('A', 'M')         # A = segment
-    c_destination('A', 'D+A')       # A = D + A
+# ***************** Methods to get data from the stack. ***********************************
+    def stack_to_dest(self, dest):
+        """ dest = *SP """
+        self.load_sp()                             # A = SP
+        self.c_destination(dest, 'M')              # dest = *SP
+
+# *****************************************************************************************
 
 
-def mem_to_stack(segment, index):
-    load_segment(segment, index)
-    c_destination('D', 'M')
-    comp_to_stack('D')
+# **************** Methods to operate SP **************************************************
+    def inc_sp(self):
+        """ SP += 1 """
+        self.a_command('SP')                       # @SP
+        self.c_destination('M', 'M+1')             # SP += 1
 
-# Methods to operate register
-def reg_to_stack(seg, index):
-    reg_to_dest('D', seg)
-    comp_to_stack('D')
+    def dec_sp(self):
+        """ SP -= 1 """
+        self.a_command('SP')                       # @SP
+        self.c_destination('M', 'M-1')             # SP -= 1
 
-
-def reg_to_dest(dest, reg):
-    a_command(reg)
-    c_destination(dest, 'M')
-
-
-
-# Arithmetic and logic operations.
-def unary_operator(operator):
-    """ SP -= 1
-        *SP = operator + *SP
-        SP += 1 """
-    return (dec_sp()
-            + comp_to_stack(operator + 'M')
-            + inc_sp())
+    def load_sp(self):
+        """ A = SP """
+        self.a_command('SP')                       # @SP
+        self.c_destination('A', 'M')               # A = SP
+# *****************************************************************************************
 
 
-def binary_operator(operator):
-    """ SP -= 1
-        D = *SP
-        SP -= 1
-        M = M operator D
-        SP += 1 """
-    return (dec_sp()
-            + stack_to_dest('D')
-            + dec_sp()
-            + comp_to_stack('M' + operator + 'D')
-            + inc_sp())
+# **************** Generator A or C or L commands. ****************************************
+    def a_command(self, value):
+        """Returns @value."""
+        self.out_file.write('@' + value + '\n')
 
+    def c_destination(self, dest, comp):
+        """Returns dest=comp."""
+        self.out_file.write(dest + '=' + comp + '\n')
 
-def compare(operator):
-    """ SP -= 1
-        D = *SP
-        SP -= 1
-        A = *SP
-        D = A - D
+    def c_jump(self, comp, jump):
+        """Returns comp;jump."""
+        self.out_file.write(comp + ';' + jump + '\n')
 
-        @jump
-        D;operator
+    def l_command(self, label):
+        """Returns (label)."""
+        self.out_file.write('(' + label + ')\n')
+# *****************************************************************************************
 
-        @end
-        *SP = 0
+input_file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/07/StackArithmetic/SimpleAdd/SimpleAdd.vm'
+file_name, ext = os.path.splitext('/Users/wen/github/Nand2tetris/nand2tetris/projects/07/StackArithmetic/SimpleAdd/SimpleAdd.vm')
+out_file_name = file_name + '.asm'
 
-        (jump)
-        *SP = -1
-
-        (end)
-        SP += 1 """
-    return (dec_sp()
-            + stack_to_dest('D')
-            + dec_sp()
-            + stack_to_dest('A')
-            + c_destination('D', 'A-D')
-            + a_command('jump')
-            + c_jump('D', operator)
-            + a_command('end')
-            + comp_to_stack('0')
-            + l_command('jump')
-            + comp_to_stack('-1')
-            + l_command('end')
-            + inc_sp())
-
-
-def is_constant_segment(segment):
-    return segment == 'constant'
-
-
-def is_memory_segment(segment):
-    return segment in ['argument', 'local', 'this', 'that']
-
-
-def is_reg_segment(segment):
-    return segment in ['pointer', 'temp']
-
-
-def is_static_segement(segment):
-    return segment == 'static'
-
-
-def push(segment, index):
-    if is_constant_segment(segment):
-        return val_to_stack(index)
-    elif is_memory_segment(segment):
-        return mem_to_stack(segment, index)
-    elif is_reg_segment(segment):
-        reg_to_stack(segment, index)
+writer = CodeWriter(out_file_name)
+parser = Parser(input_file_name)
+while parser.advance():
+    command_type = parser.command_type()
+    if command_type in [C_POP, C_PUSH]:
+        writer.write_push_pop(command_type, parser.arg1(), parser.arg2())
+    elif command_type in [C_ARITHMETIC]:
+        writer.write_arithmetic(parser.arg1())
 
 
 
 
 
-
-
-
-
-
-print(CodeWriter.write_arithmetic('and'))

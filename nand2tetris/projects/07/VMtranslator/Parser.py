@@ -1,22 +1,25 @@
+from Constant import *
+
+
 class Parser:
     """Handles the parsing of a single .vm file, and encapsulates access to the input code."""
-    _command_type = {'add': 'C_ARITHMETIC',
-                     'sub': 'C_ARITHMETIC',
-                     'neg': 'C_ARITHMETIC',
-                     'eq' : 'C_ARITHMETIC',
-                     'gt' : 'C_ARITHMETIC',
-                     'lt' : 'C_ARITHMETIC',
-                     'and': 'C_ARITHMETIC',
-                     'or' : 'C_ARITHMETIC',
-                     'not': 'C_ARITHMETIC',
-                     'label': 'C_LABEL',
-                     'goto': 'C_GOTO',
-                     'if-goto': 'C_IF',
-                     'push': 'C_PUSH',
-                     'pop': 'C_POP',
-                     'call': 'C_CALL',
-                     'return': 'C_RETURN',
-                     'function': 'C_FUNCTION'}
+    _command_type = {'add': C_ARITHMETIC,
+                     'sub': C_ARITHMETIC,
+                     'neg': C_ARITHMETIC,
+                     'eq': C_ARITHMETIC,
+                     'gt': C_ARITHMETIC,
+                     'lt': C_ARITHMETIC,
+                     'and': C_ARITHMETIC,
+                     'or': C_ARITHMETIC,
+                     'not': C_ARITHMETIC,
+                     'label': C_LABEL,
+                     'goto': C_GOTO,
+                     'if-goto': C_IF,
+                     'push': C_PUSH,
+                     'pop': C_POP,
+                     'call': C_CALL,
+                     'return': C_RETURN,
+                     'function': C_FUNCTION}
 
     def __init__(self, file):
         """Opens the input file."""
@@ -49,15 +52,13 @@ class Parser:
 
     def arg1(self):
         """Returns the first arg."""
-        if self.command_type() != 'C_RETURN':
-            if self.command_type() == 'C_ARITHMETIC':
+        if self.command_type() != C_RETURN:
+            if self.command_type() == C_ARITHMETIC:
                 return self.command[0]
             else:
                 return self.command[1]
 
     def arg2(self):
         """Returns the second arg."""
-        if self.command_type() in ['C_PUSH', 'C_POP', 'C_FUNCTION', 'C_CALL']:
+        if self.command_type() in [C_PUSH, C_POP, C_FUNCTION, C_CALL]:
             return self.command[2]
-
-
