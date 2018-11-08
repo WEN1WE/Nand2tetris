@@ -167,7 +167,6 @@ class CodeWriter:
         return {S_LCL: 'LCL', S_ARG: 'ARG', S_THIS: 'THIS', S_THAT: 'THAT', 'reg': R_R0, 'pointer': R_PTR, 'temp': R_TEMP}[seg]
 # *****************************************************************************************
 
-
 # ***************** Arithmetic and logic operations. **************************************
     def unary_operator(self, operator):
         self.dec_sp()                              # SP -= 1
