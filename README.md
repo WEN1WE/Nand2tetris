@@ -6,4 +6,5 @@
 - Project 5 2018/10/14
 - Project 6 2018/10/17
 - Project 7 2018/10/19
+- Project 8 2018/11/8
 
