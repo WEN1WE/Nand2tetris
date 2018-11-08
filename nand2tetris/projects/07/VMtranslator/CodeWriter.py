@@ -12,7 +12,8 @@ class CodeWriter:
 
     def set_file_name(self, file_name):
         """Informs the code writer that the translation of a new VM file is started."""
-        print("Start translating file:c " + file_name)
+        print("Start translating file: " + file_name)
+        self.input_file, ext = os.path.splitext(file_name)
 
     def close_file(self):
         self.out_file.close()
@@ -59,17 +60,24 @@ class CodeWriter:
         if CodeWriter.is_const_seg(seg):
             self.val_to_stack(index)
         elif CodeWriter.is_mem_seg(seg):
+            seg = CodeWriter.change_name(seg)
             self.mem_to_stack(seg, index)
+        elif CodeWriter.is_reg_seg(seg):
+            self.reg_to_stack(seg, index)
+        elif CodeWriter.is_static_seg(seg):
+            self.static_to_stack(seg, index)
+
         self.inc_sp()
 
     def pop(self, seg, index):
         self.dec_sp()                              # SP -= 1
-        if self.is_mem_seg(seg):
+        if CodeWriter.is_mem_seg(seg):
+            seg = CodeWriter.change_name(seg)
             self.stack_to_mem(seg, index)
-        elif self.is_reg_seg(seg):
+        elif CodeWriter.is_reg_seg(seg):
             self.stack_to_reg(seg, index)
-        #elif self.is_static_seg(seg):
-        #    self.stack_to_static(seg, index)
+        elif self.is_static_seg(seg):
+            self.stack_to_static(seg, index)
 
 # ***************** Gets segment type. ***************************************************
     @staticmethod
@@ -87,6 +95,10 @@ class CodeWriter:
     @staticmethod
     def is_const_seg(seg):
         return seg == S_CONST                      #
+
+    @staticmethod
+    def change_name(seg):
+        return {S_LCL: 'LCL', S_ARG: 'ARG', S_THIS: 'THIS', S_THAT: 'THAT', 'reg': R_R0, 'pointer': R_PTR, 'temp': R_TEMP}[seg]
 # *****************************************************************************************
 
 
@@ -138,10 +150,21 @@ class CodeWriter:
         self.c_destination('D', 'A')               # D = A
         self.comp_to_stack('D')                    # *SP = D
 
-    def mem_to_stack(self, segment, index):
-        self.load_seg(segment, index)              # A = segment + index
+    def mem_to_stack(self, seg, index):
+        self.load_seg(seg, index)                  # A = segment + index
         self.c_destination('D', 'M')               # D = *(segment + index)
         self.comp_to_stack('D')                    # *SP = D
+
+    def reg_to_stack(self, seg, index):
+        self.reg_to_dest('D', CodeWriter.change_name(seg) + int(index))
+        self.comp_to_stack('D')
+
+    def static_to_stack(self, seg, index):
+        self.a_command(self.input_file + '.' + str(index))
+        self.c_destination('D', 'M')
+        self.comp_to_stack('D')
+
+
 # *****************************************************************************************
 
 
@@ -153,8 +176,8 @@ class CodeWriter:
 
     def stack_to_mem(self, seg, index):
         """ *(seg + index) = *SP"""
-        self.load_seg(seg, index)                  # A = seg + index
-        self.comp_to_reg(R_R15, 'A')               # R_R15 = A
+        self.load_seg(seg, index)                  # D = seg + index
+        self.comp_to_reg(R_R15, 'D')               # R_R15 = D
         self.stack_to_dest('D')                    # D = *SP
         self.reg_to_dest('A', R_R15)               # A = R_R15
         self.c_destination('M', 'D')               # *(seg + index) = D
@@ -162,15 +185,16 @@ class CodeWriter:
     def stack_to_reg(self, seg, index):
         """ reg = *SP"""
         self.stack_to_dest('D')                    # D = *SP
-        self.comp_to_reg(seg+index, 'D')
-
-    def stack_to_static(self, seg, index):
-        self.stack_to_dest('D')
-        self.a_command(self.static_name(index))
-        self.c_destination('M', 'D')
+        seg = CodeWriter.change_name(seg)
+        self.comp_to_reg(seg+int(index), 'D')
 
     def static_name(self, index):
         return self.input_file + '.' + str(index)
+
+    def stack_to_static(self, seg, index):
+        self.stack_to_dest('D')
+        self.a_command(self.input_file + '.' + str(index))
+        self.c_destination('M', 'D')
 
 # *****************************************************************************************
 
@@ -182,7 +206,7 @@ class CodeWriter:
         self.c_destination('D', 'A')               # D = A
         self.a_command(seg)
         self.c_destination('A', 'M')               # A = seg
-        self.c_destination('A', 'D+A')             # A = D + A
+        self.c_destination('AD', 'D+A')            # AD = D + A
 # *****************************************************************************************
 
 
@@ -231,7 +255,7 @@ class CodeWriter:
         """Returns dest=comp."""
         self.out_file.write(dest + '=' + comp + '\n')
 
-    def c_jump(self, comp, jump):
+    def c_jump( self, comp, jump):
         """Returns comp;jump."""
         self.out_file.write(comp + ';' + jump + '\n')
 
@@ -240,11 +264,13 @@ class CodeWriter:
         self.out_file.write('(' + label + ')\n')
 # *****************************************************************************************
 
-input_file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/07/MemoryAccess/BasicTest/BasicTest.vm'
-file_name, ext = os.path.splitext('/Users/wen/github/Nand2tetris/nand2tetris/projects/07/MemoryAccess/BasicTest/BasicTest.vm')
+input_file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/07/MemoryAccess/StaticTest/StaticTest.vm'
+file_name, ext = os.path.splitext('/Users/wen/github/Nand2tetris/nand2tetris/projects/07/MemoryAccess/StaticTest/StaticTest.vm')
 out_file_name = file_name + '.asm'
 
 writer = CodeWriter(out_file_name)
+
+
 parser = Parser(input_file_name)
 while parser.advance():
     command_type = parser.command_type()
