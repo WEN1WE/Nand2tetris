@@ -9,15 +9,16 @@ class CompilationEngine:
 
         self.tokenizer = JackTokenizer.JackTokenizer(file)
         self.parsed_rules = []
-#        self.open_outfile(file)
-#        self.compile_class()
-#        self.close_out()
+        self.open_outfile(file)
+        self.tokenizer.advance()
+        self.compile_class()
+        self.close_outfile()
 
     def open_outfile(self, file):
         self.out_file = open(file.replace('.jack', 'MY.xml'), 'w')
         self.tokenizer.open_outfile(file)
 
-    def close_out(self):
+    def close_outfile(self):
         self.tokenizer.close_outfile()
         self.out_file.close()
 
@@ -30,22 +31,25 @@ class CompilationEngine:
         self.out_file.write('</' + rule + '>\n')
 
     def write_terminal(self):
+        token_type, token = self.tokenizer.token_type, self.tokenizer.token
+        self.out_file.write("<" + tokens[token_type] + "> " + self.tokenizer.token + " </" + tokens[token_type] + ">\n")
         self.tokenizer.advance()
-        self.out_file.write("<" + self.tokenizer.token_type + "> " + self.tokenizer.token + " </" + self.tokenizer.token_type + ">\n")
 
     def compile_class(self):
         """Compiles a complete class."""
         self.write_non_terminal_start('class')
 
-        self.write_terminal()      # write 'class'
-        self.write_terminal()      # write class name
-        self.write_terminal()      # write '{'
+        self.write_terminal()           # write 'class'
+        self.write_terminal()           # write class name
+        self.write_terminal()           # write '{'
 
         while self.is_class_var_dec():
             self.compile_class_var_dec()
 
         while self.is_subroutine():
             self.compile_subroutine()
+
+        self.write_terminal()           # write '}'
 
         self.write_non_terminal_end()
 
@@ -57,28 +61,88 @@ class CompilationEngine:
         return self.is_token(KEYWORD, 'static') or self.is_token(KEYWORD, 'field')
 
     def is_token(self, token_type, token):
-        self.tokenizer.advance()
         return (token_type, token) == (self.tokenizer.token_type, self.tokenizer.token)
 
     def compile_class_var_dec(self):
         """Compiles a static declaration or a field declaration."""
+        self.write_non_terminal_start('classVarDec')
+        self.write_terminal()           # write static | filed
+        self.write_terminal()           # write token_type
+        self.write_terminal()           # write token
+        while self.is_token(SYMBOL, ','):
+            self.write_terminal()       # write ','
+            self.write_terminal()       # write token
+        self.write_terminal()           # write ';'
+
+        self.write_non_terminal_end()
 
     def compile_subroutine(self):
         """Compiles a complete method, function, or constructor."""
+        self.write_non_terminal_start('subroutineDec')
+        self.write_terminal()           # write subroutine type
+        self.write_terminal()           # write subroutine return type | constructor name
+        self.write_terminal()           # write subroutine name | 'new'
+        self.write_terminal()           # write '('
+        self.compile_parameter_list()
+        self.write_terminal()           # write ')'
+        self.compile_subroutine_body()
+        self.write_non_terminal_end()
+
+    def compile_subroutine_body(self):
+        """ """
+        self.write_non_terminal_start('subroutineBody')
+        self.write_terminal()           # write '{'
+        while self.is_token(KEYWORD, 'var'):
+            self.compile_var_dec()
+        self.compile_statements()
+        self.write_terminal()
+        self.write_non_terminal_end()
 
     def compile_parameter_list(self):
         """Compiles a (possibly empty) parameter list, not including the enclosing ()"""
+        self.write_non_terminal_start('parameterList')
+        while not self.is_token(SYMBOL, ')'):
+            self.write_terminal()       # write parameter type
+            self.write_terminal()       # write parameter name
+            if self.is_token(SYMBOL, ','):
+                self.write_terminal()   # write ','
+        self.write_non_terminal_end()
 
     def compile_var_dec(self):
         """Compiles a var declaration."""
+        self.write_non_terminal_start('varDec')
+        self.write_terminal()           # write 'var'
+        self.write_terminal()           # write var type
+        self.write_terminal()           # write var name
+        while self.is_token(SYMBOL, ','):
+            self.write_terminal()       # write ','
+            self.write_terminal()       # write var name
+        self.write_terminal()           # write ';'
+        self.write_non_terminal_end()
+
 
     def compile_statements(self):
         """Compiles a sequence of statements, not including the enclosing {}."""
+        self.write_non_terminal_start('statements')
+        while True:
+            if self.is_token(KEYWORD, 'do'):
+                self.compile_do()
+            elif self.is_token(KEYWORD, 'let'):
+                self.compile_let()
+            elif self.is_token(KEYWORD, 'if'):
+                self.compile_if()
+            elif self.is_token(KEYWORD, 'while'):
+                self.compile_while()
+            elif self.is_token(KEYWORD, 'return'):
+                self.compile_return()
+            else:
+                break
+        self.write_non_terminal_end()
 
     def compile_do(self):
         """Compiles a do statement."""
 
-    def complie_let(self):
+    def compile_let(self):
         """Compiles a let statement."""
 
     def compile_while(self):

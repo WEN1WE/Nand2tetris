@@ -20,6 +20,7 @@ class JackTokenizer:
         self.tokens = JackTokenizer.tokenize(self.lines)
         self.index = -1
         self.token_type, self.token = (None, None)
+        self.open_outfile(file)
 
     def has_more_commands(self):
         """Are there more commands in the input?"""
@@ -30,6 +31,7 @@ class JackTokenizer:
         if self.has_more_commands():
             self.index += 1
             self.token_type, self.token = self.tokens[self.index]
+            self.write_xml()
             return 1
         return 0
 
