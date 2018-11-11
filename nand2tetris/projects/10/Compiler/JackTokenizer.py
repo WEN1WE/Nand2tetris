@@ -58,7 +58,7 @@ class JackTokenizer:
         return self.token
 
     def open_outfile(self, file):
-        self.out_file = open(file.replace('.jack', 'MY.xml'), 'w')
+        self.out_file = open(file.replace('.jack', 'TMY.xml'), 'w')
         self.out_file.write('<tokens>\n')
 
     def write_xml(self):
@@ -118,14 +118,14 @@ class JackTokenizer:
             return token_type, '&amp;'
         else:
             return token_type, token
-
+"""
 file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/10/ExpressionLessSquare/SquareGame.jack'
 s = JackTokenizer(file_name)
 s.open_outfile(file_name)
-while s.advance():
+while s.advance:
     s.write_xml()
 s.close_outfile()
-
+"""
 
 
 
