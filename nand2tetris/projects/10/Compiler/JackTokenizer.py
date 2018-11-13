@@ -35,6 +35,9 @@ class JackTokenizer:
             return 1
         return 0
 
+    def peek(self):
+        return self.token_type, self.token
+
     def token_type(self):
         """Returns the type of the current token."""
         return self.token_type
