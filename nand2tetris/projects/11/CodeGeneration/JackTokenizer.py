@@ -31,9 +31,8 @@ class JackTokenizer:
         if self.has_more_commands():
             self.index += 1
             self.token_type, self.token = self.tokens[self.index]
-            self.write_xml()
-            return 1
-        return 0
+            return self.token_type, self.token
+        return None, None
 
     def peek(self):
         return self.token_type, self.token
@@ -61,7 +60,7 @@ class JackTokenizer:
     def string_val(self):
         """Returns the string value of the current token."""
         return self.token
-
+    """
     def open_outfile(self, file):
         self.out_file = open(file.replace('.jack', 'TMY.xml'), 'w')
         self.out_file.write('<tokens>\n')
@@ -84,6 +83,7 @@ class JackTokenizer:
     def close_outfile(self):
         self.out_file.write('</tokens>')
         self.out_file.close()
+    """
 
     @staticmethod
     def split(line):

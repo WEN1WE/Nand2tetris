@@ -11,3 +11,9 @@ keywords = {"class", "constructor", "function", "method", "field", "static", "va
 symbols = {'{', '}', '(', ')', '[', ']', '.', ',', ';', '+', '-', '*', '/', '&', '<', '>', '=', '~'}
 
 tokens = ['keyword', 'symbol', 'identifier', 'integerConstant', 'stringConstant']
+
+# kind of scope
+STATIC = 0
+FILED = 1
+ARG = 2
+VAR = 3

@@ -1,6 +1,6 @@
-import JackTokenizer
-from JackConstant import *
-
+from JackTokenizer import *
+from SymbolTable import *
+from VMWriter import *
 
 class CompilationEngine:
     """ """
@@ -10,41 +10,28 @@ class CompilationEngine:
 
     def __init__(self, file):
         """ """
-        self.tokenizer = JackTokenizer.JackTokenizer(file)
-        self.parsed_rules = []
+        self.tokenizer = JackTokenizer(file)
+        self.symbols = SymbolTable()
+        self.writer = VMWriter()
+
         self.open_outfile(file)
-        self.tokenizer.advance()
         self.compile_class()
         self.close_outfile()
 
     def open_outfile(self, file):
-        self.out_file = open(file.replace('.jack', 'MY.xml'), 'w')
-        self.tokenizer.open_outfile(file)
+        self.writer.open_outfile(file)
 
     def close_outfile(self):
-        self.tokenizer.close_outfile()
-        self.out_file.close()
+        self.writer.close_outfile()
 
-    def write_non_terminal_start(self, rule):
-        self.out_file.write('<' + rule + '>\n')
-        self.parsed_rules.append(rule)
-
-    def write_non_terminal_end(self):
-        rule = self.parsed_rules.pop()
-        self.out_file.write('</' + rule + '>\n')
-
-    def write_terminal(self):
-        token_type, token = self.tokenizer.peek()
-        self.out_file.write("<" + tokens[token_type] + "> " + token + " </" + tokens[token_type] + ">\n")
-        self.tokenizer.advance()
+    def advance(self):
+        return self.tokenizer.advance()
 
     def compile_class(self):
         """Compiles a complete class."""
-        self.write_non_terminal_start('class')
-
-        self.write_terminal()  # write 'class'
-        self.write_terminal()  # write class name
-        self.write_terminal()  # write '{'
+        self.advance()  # read 'class' keyword
+        self.cur_class = self.advance()[1]  # read class name
+        self.advance()  # read '{'
 
         while self.is_class_var_dec():
             self.compile_class_var_dec()
@@ -52,9 +39,7 @@ class CompilationEngine:
         while self.is_subroutine():
             self.compile_subroutine()
 
-        self.write_terminal()  # write '}'
-
-        self.write_non_terminal_end()
+        self.advance()  # read '}'
 
     def is_subroutine(self):
         token_type, token = self.tokenizer.peek()
@@ -69,64 +54,61 @@ class CompilationEngine:
 
     def compile_class_var_dec(self):
         """Compiles a static declaration or a field declaration."""
-        self.write_non_terminal_start('classVarDec')
-        self.write_terminal()  # write static | filed
-        self.write_terminal()  # write token_type
-        self.write_terminal()  # write token
+        kind = self.advance()[1]  # read static | filed
+        type = self.advance()[1]  # read var type
+        name = self.advance()[1]  # read var name
+        self.symbols.define(name, type, kind)
         while self.is_token(SYMBOL, ','):
-            self.write_terminal()  # write ','
-            self.write_terminal()  # write token
-        self.write_terminal()  # write ';'
-
-        self.write_non_terminal_end()
+            self.advance()  # read ','
+            name = self.advance()[1]
+            self.symbols.define(name, type, kind)
+        self.advance()  # get ';'
 
     def compile_subroutine(self):
         """Compiles a complete method, function, or constructor."""
-        self.write_non_terminal_start('subroutineDec')
-        self.write_terminal()  # write subroutine type
-        self.write_terminal()  # write subroutine return type | constructor name
-        self.write_terminal()  # write subroutine name | 'new'
-        self.write_terminal()  # write '('
+        token_type, token = self.advance()  # read subroutine type
+        self.advance()  # read subroutine return type | constructor name
+        self.cur_subroutine = self.advance()[1]  # read subroutine name | 'new'
+        self.symbols.start_subroutine()
+        if token == 'method':
+            self.symbols.define('this', self.cur_class, ARG)
+        self.advance()  # read '('
         self.compile_parameter_list()
-        self.write_terminal()  # write ')'
-        self.compile_subroutine_body()
-        self.write_non_terminal_end()
+        self.advance()  # read ')'
+        self.compile_subroutine_body(token)
 
-    def compile_subroutine_body(self):
+    def compile_subroutine_body(self, token):
         """ """
-        self.write_non_terminal_start('subroutineBody')
-        self.write_terminal()  # write '{'
+        self.advance()  # read '{'
         while self.is_token(KEYWORD, 'var'):
             self.compile_var_dec()
         self.compile_statements()
-        self.write_terminal()
-        self.write_non_terminal_end()
+        self.advance()  # read '}'
 
     def compile_parameter_list(self):
         """Compiles a (possibly empty) parameter list, not including the enclosing ()"""
-        self.write_non_terminal_start('parameterList')
+
         while not self.is_token(SYMBOL, ')'):
-            self.write_terminal()  # write parameter type
-            self.write_terminal()  # write parameter name
+            type = self.advance()[1]  # read parameter type
+            name = self.advance()[1]  # read parameter name
+            self.symbols.define(name, type, ARG)
             if self.is_token(SYMBOL, ','):
-                self.write_terminal()  # write ','
-        self.write_non_terminal_end()
+                self.advance()  # read ','
 
     def compile_var_dec(self):
         """Compiles a var declaration."""
-        self.write_non_terminal_start('varDec')
-        self.write_terminal()  # write 'var'
-        self.write_terminal()  # write var type
-        self.write_terminal()  # writef var name
+        kind = self.advance()[1]  # read 'var'
+        type = self.advance()[1]  # read var type
+        name = self.advance()[1]  # read var name
+        self.symbols.define(name, type, kind)
         while self.is_token(SYMBOL, ','):
-            self.write_terminal()  # write ','
-            self.write_terminal()  # write var name
-        self.write_terminal()  # write ';'
-        self.write_non_terminal_end()
+            self.advance()  # read ','
+            name = self.advance()[1]  # read var name
+            self.symbols.define(name, type, kind)
+        self.advance()  # read ';'
 
     def compile_statements(self):
         """Compiles a sequence of statements, not including the enclosing {}."""
-        self.write_non_terminal_start('statements')
         while True:
             if self.is_token(KEYWORD, 'do'):
                 self.compile_do()
@@ -140,24 +122,21 @@ class CompilationEngine:
                 self.compile_return()
             else:
                 break
-        self.write_non_terminal_end()
 
     def compile_do(self):
         """Compiles a do statement."""
-        self.write_non_terminal_start('doStatement')
-        self.write_terminal()  # write 'do'
+        self.advance()  # read 'do' keyword
         self.compile_subroutine_call()
-        self.write_terminal()  # write ';'
-        self.write_non_terminal_end()
+        self.writer.write_pop('temp', 0)
+        self.advance()  # write ';'
 
     def compile_subroutine_call(self):
-        self.write_terminal()  # write class | subroutine name
         if self.is_token(SYMBOL, '.'):
             self.write_terminal()  # write '.'
             self.write_terminal()  # write subroutine name
         self.write_terminal()  # write '('
         self.compile_expression_list()  #
-        self.write_terminal()  # write ')'
+
 
     def compile_let(self):
         """Compiles a let statement."""
@@ -222,7 +201,7 @@ class CompilationEngine:
 
     def compile_term(self):
         """Compiles a term."""
-        self.write_non_terminal_start('term')
+
         token_type, token = self.tokenizer.peek()
         if token_type in [INT_CONST, STRING_CONST] or token in CompilationEngine.keywordConstant:
             self.write_terminal()  # write constant
@@ -249,17 +228,16 @@ class CompilationEngine:
             self.write_terminal()  # write '('
             self.compile_expression()
             self.write_terminal()  # write ')'
-        self.write_non_terminal_end()
+
 
     def compile_expression_list(self):
         """Compiles a (possibly empty) comma-separated list of expressions."""
-        self.write_non_terminal_start('expressionList')
+
         if self.is_term():
             self.compile_expression()
         while self.is_token(SYMBOL, ','):
             self.write_terminal()  # write ','
             self.compile_expression()
-        self.write_non_terminal_end()
 
     def is_binary_op(self):
         token_type, token = self.tokenizer.peek()
