@@ -50,7 +50,7 @@ class CodeWriter:
         self.push(S_REG, R_ARG)                     # push ARG
         self.push(S_REG, R_THIS)                    # push THIS
         self.push(S_REG, R_THAT)                    # push THAT
-        self.offset_sp(num_args+5)                  # D = SP - n - 5
+        self.offset_sp(str(int(num_args)+5))                  # D = SP - n - 5
         self.comp_to_reg(R_ARG, 'D')                # LCL = D
         self.reg_to_reg(R_LCL, R_SP)                # LCL=SP
         self.a_command(function_name)
@@ -60,7 +60,7 @@ class CodeWriter:
     def write_function(self, funciton_name, num_locals):
         """Writes the assembly code that is the trans of the given function command."""
         self.l_command(funciton_name)
-        for i in range(num_locals):
+        for i in range(int(num_locals)):
             self.push(S_CONST, 0)
 
     def write_return(self):
@@ -119,6 +119,7 @@ class CodeWriter:
 
 # ***************** Helper methods for push and pop. *************************************
     def push(self, seg, index):
+        index = str(index)
         if CodeWriter.is_const_seg(seg):
             self.val_to_stack(index)
         elif CodeWriter.is_mem_seg(seg):
@@ -132,6 +133,7 @@ class CodeWriter:
         self.inc_sp()
 
     def pop(self, seg, index):
+        index = str(index)
         self.dec_sp()                              # SP -= 1
         if CodeWriter.is_mem_seg(seg):
             seg = CodeWriter.change_name(seg)
@@ -339,25 +341,35 @@ class CodeWriter:
         return 'LABEL' + str(self.count)
 # *****************************************************************************************
 
-input_file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/08/ProgramFlow/FibonacciSeries/FibonacciSeries.vm'
-file_name, ext = os.path.splitext(input_file_name)
-out_file_name = file_name + '.asm'
+
+out_file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/08/FunctionCalls/StaticsTest/StaticsTest.asm'
 
 writer = CodeWriter(out_file_name)
+writer.write_init()
 
-parser = Parser(input_file_name)
-print(parser.commands)
+def _write(input_file_name):
+    parser = Parser(input_file_name)
+    writer.input_file = input_file_name[input_file_name.rfind('/')+1:input_file_name.rfind('.')]
 
-while parser.advance():
-    command_type = parser.command_type()
-    if command_type in [C_POP, C_PUSH]:
-        writer.write_push_pop(command_type, parser.arg1(), parser.arg2())
-    elif command_type in [C_ARITHMETIC]:
-        writer.write_arithmetic(parser.arg1())
-    elif command_type is C_LABEL:
-        writer.write_label(parser.arg1())
-    elif command_type is C_GOTO:
-        writer.write_goto(parser.arg1())
-    elif command_type is C_IF:
-        writer.write_if(parser.arg1())
+    while parser.advance():
+        command_type = parser.command_type()
+        if command_type in [C_POP, C_PUSH]:
+            writer.write_push_pop(command_type, parser.arg1(), parser.arg2())
+        elif command_type in [C_ARITHMETIC]:
+            writer.write_arithmetic(parser.arg1())
+        elif command_type is C_LABEL:
+            writer.write_label(parser.arg1())
+        elif command_type is C_GOTO:
+            writer.write_goto(parser.arg1())
+        elif command_type is C_IF:
+            writer.write_if(parser.arg1())
+        elif command_type is C_FUNCTION:
+            writer.write_function(parser.arg1(), parser.arg2())
+        elif command_type is C_RETURN:
+            writer.write_return()
+        elif command_type is C_CALL:
+            writer.write_call(parser.arg1(), parser.arg2())
 
+_write('/Users/wen/github/Nand2tetris/nand2tetris/projects/08/FunctionCalls/StaticsTest/Sys.vm')
+_write('/Users/wen/github/Nand2tetris/nand2tetris/projects/08/FunctionCalls/StaticsTest/Class1.vm')
+_write('/Users/wen/github/Nand2tetris/nand2tetris/projects/08/FunctionCalls/StaticsTest/Class2.vm')
