@@ -339,18 +339,25 @@ class CodeWriter:
         return 'LABEL' + str(self.count)
 # *****************************************************************************************
 
-input_file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/07/MemoryAccess/StaticTest/StaticTest.vm'
-file_name, ext = os.path.splitext('/Users/wen/github/Nand2tetris/nand2tetris/projects/07/MemoryAccess/StaticTest/StaticTest.vm')
+input_file_name = '/Users/wen/github/Nand2tetris/nand2tetris/projects/08/ProgramFlow/FibonacciSeries/FibonacciSeries.vm'
+file_name, ext = os.path.splitext(input_file_name)
 out_file_name = file_name + '.asm'
 
 writer = CodeWriter(out_file_name)
 
-
 parser = Parser(input_file_name)
+print(parser.commands)
+
 while parser.advance():
     command_type = parser.command_type()
     if command_type in [C_POP, C_PUSH]:
         writer.write_push_pop(command_type, parser.arg1(), parser.arg2())
     elif command_type in [C_ARITHMETIC]:
         writer.write_arithmetic(parser.arg1())
+    elif command_type is C_LABEL:
+        writer.write_label(parser.arg1())
+    elif command_type is C_GOTO:
+        writer.write_goto(parser.arg1())
+    elif command_type is C_IF:
+        writer.write_if(parser.arg1())
 
