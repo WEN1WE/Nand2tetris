@@ -6,8 +6,8 @@ class SymbolTable:
         """ """
         self.global_symbol = {}
         self.subroutine_symbol = {}
-        self.symbols = {STATIC: self.global_symbol, FILED: self.global_symbol, ARG: self.subroutine_symbol, VAR: self.subroutine_symbol}
-        self.index = {STATIC: 0, FILED: 0, ARG: 0, VAR: 0}
+        self.symbols = {STATIC: self.global_symbol, FIELD: self.global_symbol, ARG: self.subroutine_symbol, VAR: self.subroutine_symbol}
+        self.index = {STATIC: 0, FIELD: 0, ARG: 0, VAR: 0}
 
     def start_subroutine(self):
         """Starts a new subroutine scope."""

@@ -4,8 +4,8 @@ from JackConstant import *
 
 class JackTokenizer:
     """ """
-    keywords_regex = '(?!\w)|'.join(keywords) + '(?!\w)'
-    symbols_regex = '[' + re.escape('|'.join(symbols)) + ']'
+    keywords_regex = '(?!\w)|'.join(KEYWORDS) + '(?!\w)'
+    symbols_regex = '[' + re.escape('|'.join(SYMBOLS)) + ']'
     integer_regex = r'\d+'
     string_regex = r'"[^"\n]*"'
     identifier_regex = r'\w+'
@@ -20,7 +20,6 @@ class JackTokenizer:
         self.tokens = JackTokenizer.tokenize(self.lines)
         self.index = -1
         self.token_type, self.token = (None, None)
-        self.open_outfile(file)
 
     def has_more_commands(self):
         """Are there more commands in the input?"""
@@ -37,7 +36,10 @@ class JackTokenizer:
     def peek(self):
         return self.token_type, self.token
 
-    def token_type(self):
+    def get_token(self):
+        return self.token
+
+    def get_token_type(self):
         """Returns the type of the current token."""
         return self.token_type
 
@@ -64,6 +66,7 @@ class JackTokenizer:
     def open_outfile(self, file):
         self.out_file = open(file.replace('.jack', 'TMY.xml'), 'w')
         self.out_file.write('<tokens>\n')
+        
 
     def write_xml(self):
         token_type, token = self.token_type, self.token
