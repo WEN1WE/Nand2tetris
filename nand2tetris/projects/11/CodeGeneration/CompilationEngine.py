@@ -157,87 +157,114 @@ class CompilationEngine:
     def compile_do(self):
         """Compiles a do statement."""
         self.advance()  # skip 'do' keyword
-        self.compile_subroutine_call()
+        name = self.tokenizer.get_token()
+        self.compile_subroutine_call(name)
         self.vm.write_pop('temp', 0)
         self.advance()  # skip ';'
 
-    # not Finished
-    def compile_subroutine_call(self):
+    # Finished
+    def compile_subroutine_call(self, name):
         num_args = 0
-        first_name = self.advance()[1]
 
         if self.is_token(SYMBOL, '.'):
-            self.advance()
-            last_name = self.advance()[1]
-            if first_name in self.symbols.subroutine_symbol or first_name in self.symbols.global_symbol:
-                self.write_push(first_name)
-                name = self.symbols.type_of(first_name) + '.' + last_name
+            self.advance() # skip '.'
+            method_name = self.tokenizer.get_token()
+            self.advance()  # skip last_name
+            if name in self.symbols.subroutine_symbol or name in self.symbols.global_symbol:
+                self.write_push(name)
+                full_name = self.symbols.type_of(name) + '.' + method_name
                 num_args += 1
             else:
-                name = first_name + '.' + last_name
+                full_name = name + '.' + method_name
         else:
             self.vm.write_push('pointer', 0)
             num_args += 1
-            name = self.cur_class + '.' + first_name
-        self.advance()
+            full_name = self.cur_class + '.' + name
+        self.advance()  # skip '('
         num_args += self.compile_expression_list()
-        self.vm.write_call(name, num_args)
-        self.advance()
+        self.vm.write_call(full_name, num_args)
+        self.advance()  # skip ')'
 
+
+    """
+    def compile_subroutine_call(self, name):
+        (type, kind, index) = self.symbols.look_up(name)
+    """
+
+    # Finished
     def compile_let(self):
         """Compiles a let statement."""
-        self.advance()  # write 'let'
-        self.advance()  # write var name
-        if self.is_token(SYMBOL, '['):
-            self.advance()  # write '['
-            self.compile_expression()
-            self.advance()  # write ']'
-        self.advance()  # write '='
-        self.compile_expression()
+        self.advance()  # skip 'let'
+        name = self.tokenizer.get_token()
+        self.advance()  # skip name
+        subscript = self.is_token(SYMBOLS, '[')
+        if subscript:
+            self.compile_base_plus_index(name)
+        self.advance()  # skip '='
+        self.compile_expression()  # calculate expression
         self.advance()  # write ';'
+        if subscript:
+            self.pop_array_element()  # *(base+index) == expr
+        else:
+            self.write_pop(name)
 
-    # not Finished
+    # Finished
+    def pop_array_element(self):
+        self.vm.write_pop('temp', 1)  # pop expr value to temp register
+        self.vm.write_pop('pointer', 1)  # pop base+index into 'that' register
+        self.vm.write_push('temp', 1)  # push expr back into stack
+        self.vm.write_pop('that', 0)  # pop value into *(base+index)
+
+    # Finished
+    def compile_base_plus_index(self, name):
+        self.write_push(name)
+        self.advance()  # skip '['
+        self.compile_expression()  # push index into stack
+        self.advance()  # skip '['
+        self.vm.write_vm_cmd('add')  # base+index
+
+    # Finished
     def compile_while(self):
         """Compiles a while statement."""
         L1 = self.new_label()
         L2 = self.new_label()
 
         self.vm.write_label(L1)
-        self.advance()  # read 'while'
-        self.advance()  # read '('
+        self.advance()  # skip 'while'
+        self.advance()  # skip '('
         self.compile_expression()
-        self.advance()  # read ')'
+        self.advance()  # skip ')'
         self.vm.write_vm_cmd('not')  # ~(cond)
         self.vm.write_if(L2)
-        self.advance()  # read '{'
+        self.advance()  # skip '{'
         self.compile_statements()
-        self.advance()  # read '}'
+        self.advance()  # rskip '}'
         self.vm.write_goto(L1)  # goto L1
         self.vm.write_label(L2)
 
-    # not Finished
+    # Finished
     def compile_if(self):
         """Compiles an if statement, possibly with a trailing else clause."""
         L1 = self.new_label()
         L2 = self.new_label()
 
-        self.advance()  # read 'if'
-        self.advance()  # read '('
+        self.advance()  # skip 'if'
+        self.advance()  # skip '('
         self.compile_expression()
-        self.advance()  # read ')'
+        self.advance()  # skip ')'
         self.vm.write_vm_cmd('not')  # ~(cond)
         self.vm.write_if(L1)
-        self.advance()  # read '{'
+        self.advance()  # skip '{'
         self.compile_statements()
-        self.advance()  # read '}'
+        self.advance()  # skip '}'
         self.vm.write_goto(L2)  # goto L2
         self.vm.write_label(L1)
 
         if self.is_token(KEYWORD, 'else'):
-            self.advance()  # read 'else'
-            self.advance()  # read '{'
+            self.advance()  # skip 'else'
+            self.advance()  # skip '{'
             self.compile_statements()
-            self.advance()  # read '}'
+            self.advance()  # skip '}'
         self.vm.write_label(L2)
 
     # Finished
@@ -252,36 +279,22 @@ class CompilationEngine:
         self.advance()  # skip ';'
         self.vm.write_return()
 
-
+    # Finished
     def compile_expression(self):
         """Compiles an expression."""
-
         self.compile_term()
         while self.is_binary_op():
-            self.advance()  # write binaryOp
+            binary_op = self.tokenizer.get_token()
+            self.advance()  # skip op
             self.compile_term()
+            self.vm.write_vm_cmd(VM_BINORY_CMDS[binary_op])
 
+    # Finished
     def compile_term(self):
         """Compiles a term."""
+        token_type, token = self.tokenizer.peek()
         if self.is_const():
             self.compile_const()
-
-        elif self.is_binary_op():
-            self.advance()  # write class | var name
-            if self.is_token(SYMBOL, '['):
-                self.advance()  # write '['
-                self.compile_expression()
-                self.advance()  # write ']'
-            elif self.is_token(SYMBOL, '('):
-                self.advance()  # write '('
-                self.compile_expression_list()
-                self.advance()  # write ')
-            elif self.is_token(SYMBOL, '.'):
-                self.advance()  # write '.'
-                self.advance()  # write subroutine name
-                self.advance()  # write '('
-                self.compile_expression_list()
-                self.advance()  # write ')'
         elif self.is_unary_op():
             self.advance()  # write unaryOp
             self.compile_term()
@@ -289,17 +302,56 @@ class CompilationEngine:
             self.advance()  # write '('
             self.compile_expression()
             self.advance()  # write ')'
+        elif token_type is IDENTIFIER:
+            self.advance()  # skip class name
+            if self.is_token(SYMBOLS, '['):
+                self.compile_array_subscript(token)
+            elif self.is_token(SYMBOLS, '.'):
+                self.compile_subroutine_call(token)
+            else:
+                self.write_push(token)
 
+    # Finished
+    def compile_array_subscript(self, name):
+        self.write_push(name)
+        self.advance()  # skip name
+        self.advance()  # skip '['
+        self.compile_expression()  # push index into stack
+        self.advance()  # skip ']'
+        self.vm.write_vm_cmd('add')
+        self.vm.write_pop('pointer', 1)  # pop into 'that' ptr
+        self.vm.write_push('that', 0)  # push *(base+index) into stack
+
+    # Finished
     def compile_const(self):
         token_type, token = self.tokenizer.peek()
         if token_type == INT_CONST:
             self.vm.write_push('constant', token)
         elif token_type == STRING_CONST:
             self.write_string_const(token)
+        elif token_type == CompilationEngine.keywordConstant:
+            self.compile_kew_const(token)
 
+    # Finished
+    def compile_kew_const(self, kwd):
+        if kwd == 'this':
+            self.vm.write_push('pointer', 0)
+        elif kwd == 'true':
+            self.vm.write_push('constant', 1)
+            self.vm.write_vm_cmd('neg')
+        else:
+            self.vm.write_push('constant', 0)
+
+    # Finished
     def write_string_const(self, token):
         """ """
+        self.vm.write_push('constant', len(token))
+        self.vm.write_call('String.new', 1)  # String.new(len(str))
+        for c in token:
+            self.vm.write_push('constant', ord(c))
+            self.vm.write_call('String.appendChar', 2)  # String.appendChar(c)
 
+    # Finished
     def compile_expression_list(self):
         """Compiles a (possibly empty) comma-separated list of expressions."""
         if self.is_term():
@@ -334,11 +386,11 @@ class CompilationEngine:
 
     def write_push(self, name):
         (type, kind, index) = self.symbols.look_up(name)
-        self.vm.write_push(segments[kind], index)
+        self.vm.write_push(SEGMENTS[kind], index)
 
     def write_pop(self, name):
         (type, kind, index) = self.symbols.look_up(name)
-        self.vm.write_pop(segments[kind], index)
+        self.vm.write_pop(SEGMENTS[kind], index)
 
     def load_pointer(self, func_type):
         if func_type[1] == 'method':
